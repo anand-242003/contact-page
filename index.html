@@ -184,7 +184,11 @@
             Message sent successfully! I'll get back to you soon.
         </div>
 
-        <form id="contactForm">
+        <form action="https://formsubmit.co/anandmishra3001@gmail.com" method="POST" id="contactForm">
+            <input type="hidden" name="_subject" value="New message from your portfolio!">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_next" value="https://anand-242003.github.io/contact-page/">
+            
             <div class="form-group">
                 <label for="name">Your Name</label>
                 <input type="text" id="name" name="name" placeholder="John Doe" required>
@@ -206,35 +210,7 @@
         <div class="social-links">
             <a href="https://www.linkedin.com/in/anand-mishra-a3a306225" target="_blank">LinkedIn</a>
             <a href="https://github.com/anand-242003" target="_blank">GitHub</a>
-            <a href="https://twitter.com/anand_dev_" target="_blank">Twitter</a>
         </div>
     </div>
-
-    <script>
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const message = document.getElementById('message').value;
-            
-            // Create mailto link
-            const subject = encodeURIComponent(`New Message from ${name}`);
-            const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
-            const mailtoLink = `mailto:anandmishra3001@gmail.com?subject=${subject}&body=${body}`;
-            
-            // Open email client
-            window.location.href = mailtoLink;
-            
-            // Show success message
-            document.getElementById('successMessage').classList.add('show');
-            
-            // Reset form
-            setTimeout(() => {
-                document.getElementById('contactForm').reset();
-                document.getElementById('successMessage').classList.remove('show');
-            }, 3000);
-        });
-    </script>
 </body>
 </html>

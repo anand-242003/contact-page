@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Defender Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border: 3px solid #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            background: #0D1117;
+        }
+        
+        canvas {
+            background: #0D1117;
+            display: block;
+        }
+        
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 10;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            color: #fff;
+        }
+        
+        button {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 20px;
+            z-index: 5;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .info {
+            margin: 20px;
+            text-align: center;
+            line-height: 1.8;
+            color: #b0b0b0;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1>CODE DEFENDER</h1>
+            <div class="info">
+                <p>Use Arrow Keys to Move</p>
+                <p>Press SPACE to Shoot</p>
+                <p>Destroy all bugs!</p>
+            </div>
+            <button id="startBtn">START GAME</button>
+        </div>
+        
+        <div id="gameOverScreen" class="hidden">
+            <h1>GAME OVER</h1>
+            <p id="finalScore" style="font-size: 24px; margin: 20px;"></p>
+            <button id="restartBtn">PLAY AGAIN</button>
+            <button onclick="window.location.href='index.html'">BACK</button>
+        </div>
+        
+        <div id="hud" class="hidden">
+            <span>SCORE: <span id="score">0</span></span>
+            <span>LEVEL: <span id="level">1</span></span>
+            <span>LIVES: <span id="lives">3</span></span>
+        </div>
+        
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let game = {
+            running: false,
+            score: 0,
+            level: 1,
+            lives: 3
+        };
+        
+        let player = {
+            x: 375,
+            y: 550,
+            width: 50,
+            height: 20,
+            speed: 5
+        };
+        
+        let bullets = [];
+        let enemies = [];
+        let keys = {};
+        
+        document.addEventListener('keydown', e => keys[e.key] = true);
+        document.addEventListener('keyup', e => keys[e.key] = false);
+        
+        document.getElementById('startBtn').onclick = startGame;
+        document.getElementById('restartBtn').onclick = restartGame;
+        
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            game = { running: true, score: 0, level: 1, lives: 3 };
+            player = { x: 375, y: 550, width: 50, height: 20, speed: 5 };
+            bullets = [];
+            createEnemies();
+            updateHUD();
+            gameLoop();
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            startGame();
+        }
+        
+        function createEnemies() {
+            enemies = [];
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 8; col++) {
+                    enemies.push({
+                        x: 100 + col * 80,
+                        y: 50 + row * 60,
+                        width: 40,
+                        height: 30,
+                        speed: 1,
+                        dir: 1
+                    });
+                }
+            }
+        }
+        
+        function shoot() {
+            bullets.push({
+                x: player.x + player.width / 2 - 2,
+                y: player.y,
+                width: 4,
+                height: 10,
+                speed: 7
+            });
+        }
+        
+        function update() {
+            if (!game.running) return;
+            
+            // Player movement
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+            if (keys['ArrowRight'] && player.x < 750) player.x += player.speed;
+            if (keys[' ']) {
+                if (!keys.shooting) {
+                    shoot();
+                    keys.shooting = true;
+                    setTimeout(() => keys.shooting = false, 300);
+                }
+            }
+            
+            // Bullets
+            bullets = bullets.filter(b => {
+                b.y -= b.speed;
+                return b.y > 0;
+            });
+            
+            // Enemies
+            let changeDir = false;
+            enemies.forEach(e => {
+                e.x += e.speed * e.dir;
+                if (e.x <= 0 || e.x >= 760) changeDir = true;
+            });
+            
+            if (changeDir) {
+                enemies.forEach(e => {
+                    e.dir *= -1;
+                    e.y += 20;
+                });
+            }
+            
+            // Collisions
+            bullets.forEach((b, bi) => {
+                enemies.forEach((e, ei) => {
+                    if (b.x < e.x + e.width && b.x + b.width > e.x &&
+                        b.y < e.y + e.height && b.y + b.height > e.y) {
+                        enemies.splice(ei, 1);
+                        bullets.splice(bi, 1);
+                        game.score += 10;
+                        updateHUD();
+                    }
+                });
+            });
+            
+            // Level complete
+            if (enemies.length === 0) {
+                game.level++;
+                updateHUD();
+                createEnemies();
+            }
+            
+            // Game over check
+            enemies.forEach(e => {
+                if (e.y > 520) {
+                    gameOver();
+                }
+            });
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#0D1117';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Player
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(player.x + 20, player.y - 5, 10, 5);
+            
+            // Bullets
+            ctx.fillStyle = '#fff';
+            bullets.forEach(b => {
+                ctx.fillRect(b.x, b.y, b.width, b.height);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#fff';
+                ctx.fillRect(b.x, b.y, b.width, b.height);
+                ctx.shadowBlur = 0;
+            });
+            
+            // Enemies
+            ctx.fillStyle = '#888';
+            enemies.forEach(e => {
+                ctx.fillRect(e.x, e.y, e.width, e.height);
+                ctx.fillStyle = '#0D1117';
+                ctx.fillRect(e.x + 10, e.y + 8, 8, 8);
+                ctx.fillRect(e.x + 22, e.y + 8, 8, 8);
+                ctx.fillStyle = '#888';
+            });
+        }
+        
+        function gameLoop() {
+            if (!game.running) return;
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function updateHUD() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('level').textContent = game.level;
+            document.getElementById('lives').textContent = game.lives;
+        }
+        
+        function gameOver() {
+            game.running = false;
+            document.getElementById('finalScore').textContent = 
+                `Score: ${game.score} | Level: ${game.level}`;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
